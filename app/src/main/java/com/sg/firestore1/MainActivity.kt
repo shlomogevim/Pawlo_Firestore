@@ -5,38 +5,39 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Toast
-import androidx.core.text.set
 import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.sg.firestore1.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
     lateinit var binding: ActivityMainBinding
-   lateinit var refThought:DocumentReference
+   lateinit var thoughtRef:DocumentReference
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        refThought=FirebaseFirestore.getInstance().collection(COLLECTION_NAME)
+        thoughtRef=FirebaseFirestore.getInstance().collection(COLLECTION_NAME)
         .document("First Thought")
     }
 
     override fun onStart() {
         super.onStart()
-        refThought.addSnapshotListener(this) { value, error ->
+        thoughtRef.addSnapshotListener(this) { value, error ->
                     if (error != null) {
                         Toast.makeText(this, "Something go wrong", Toast.LENGTH_LONG).show()
                     }
                     if (value != null && value.exists()){
-                        val title = value[KEY_TITLE].toString()
-                        val thought = value[KET_THOUGHT].toString()
-                        binding.etRecivedTitle.text = title
+                        var title = value[KEY_TITLE].toString()
+                        var thought = value[KET_THOUGHT].toString()
+                        if (title=="null") title="no data"
+                        if (thought=="null") thought="no data"
+                         binding.etRecivedTitle.text = title
                         binding.etRecivedThought.text = thought
                     }
                 }
     }
-
 
     fun saveThoughtOnclick(view: View) {
         val title = binding.editTextTitle.text.toString().trim()
@@ -44,7 +45,7 @@ class MainActivity : AppCompatActivity() {
         val data = HashMap<String, Any>()
         data.put(KEY_TITLE, title)
         data.put(KET_THOUGHT, thought)
-        refThought.set(data)
+        thoughtRef.set(data)
                 .addOnSuccessListener {
                     Log.i(TAG, "Data send to Firestore successfully")
                 }
@@ -55,7 +56,7 @@ class MainActivity : AppCompatActivity() {
 
     fun showThoughtOnclick(view: View) {
         var data = HashMap<String, Any>()
-        refThought.get()
+        thoughtRef.get()
                 .addOnSuccessListener { snapshot ->
                     if (snapshot.exists()) {
                         data = snapshot.data as HashMap<String, Any>
@@ -74,5 +75,36 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    fun updateThoughtOnclick(view: View) {
+        val title=binding.editTextTitle.text.toString().trim()
+        val thought=binding.editTextThought.text.toString().trim()
+        var data=HashMap<String,Any>()
+        data.put(KEY_TITLE,title)
+        data.put(KET_THOUGHT,thought)
+        thoughtRef.update(data)
+                .addOnSuccessListener {
+                    Log.i(TAG, "Data update successfully")
+                }
+                .addOnFailureListener {
+                    Log.i(TAG, "Cannot update because ${it.localizedMessage}")
+                }
+    }
+
+    fun deleteThoughtOnclick(view: View) {
+        var data=HashMap<String,Any>()
+        data.put(KEY_TITLE,FieldValue.delete())    // delete onle the title
+        data.put(KET_THOUGHT,FieldValue.delete())  // delete only the thought
+
+
+        thoughtRef.update(data)
+                .addOnSuccessListener {
+                    Log.i(TAG, "Data delete successfully")
+                }
+                .addOnFailureListener {
+                    Log.i(TAG, "Cannot delete because ${it.localizedMessage}")
+                }
+
+      //   thoughtRef.delete()      //  delete all the ref
+    }
 
 }
